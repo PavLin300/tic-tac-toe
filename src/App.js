@@ -2,12 +2,14 @@ import { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Button from "react-bootstrap/Button";
 import { Col, Container, Row } from "react-bootstrap";
-function Square({ value, onSquareClick }) {
+import "bootstrap-icons/font/bootstrap-icons.css";
+function Square({ value, onSquareClick, winSquare }) {
+	const variant = winSquare ? "danger" : "light";
 	return (
 		<Button
 			onClick={onSquareClick}
 			style={{ width: 100, height: 100 }}
-			variant='light'
+			variant={variant}
 			className='border border-primary fs-4'
 		>
 			{value}
@@ -15,9 +17,9 @@ function Square({ value, onSquareClick }) {
 	);
 }
 
-function Board({ xIsNext, squares, onPlay }) {
+function Board({ xIsNext, squares, onPlay, onReset }) {
 	function handleClick(i) {
-		if (calculateWinner(squares) || squares[i]) {
+		if (calculateWinner(squares)[0] || squares[i]) {
 			return;
 		}
 		const nextSquares = squares.slice();
@@ -29,31 +31,38 @@ function Board({ xIsNext, squares, onPlay }) {
 		onPlay(nextSquares);
 	}
 
-	const winner = calculateWinner(squares);
+	const [winner, winIndexes] = calculateWinner(squares);
 	let status;
+	let winnerIndexes = Array(3).fill(null);
 	if (winner) {
 		status = "Winner: " + winner;
+		winnerIndexes = winIndexes;
 	} else {
 		status = "Next player: " + (xIsNext ? "X" : "O");
 	}
 
 	return (
 		<>
-			<div className='mb-2 fs-2 '>{status}</div>
+			<div className='mb-2 pt-3 fs-2 d-flex justify-content-between'>
+				{status}
+				<Button variant='outline-primary' onClick={onReset}>
+					<i
+						className='bi bi-arrow-clockwise align-self-end'
+						style={{ fontSize: "30px" }}
+					></i>
+				</Button>
+			</div>
+
 			<Row>
-				<Square value={squares[0]} onSquareClick={() => handleClick(0)} />
-				<Square value={squares[1]} onSquareClick={() => handleClick(1)} />
-				<Square value={squares[2]} onSquareClick={() => handleClick(2)} />
-			</Row>
-			<Row>
-				<Square value={squares[3]} onSquareClick={() => handleClick(3)} />
-				<Square value={squares[4]} onSquareClick={() => handleClick(4)} />
-				<Square value={squares[5]} onSquareClick={() => handleClick(5)} />
-			</Row>
-			<Row>
-				<Square value={squares[6]} onSquareClick={() => handleClick(6)} />
-				<Square value={squares[7]} onSquareClick={() => handleClick(7)} />
-				<Square value={squares[8]} onSquareClick={() => handleClick(8)} />
+				{squares.map((square, i) => (
+					<Col lg={4} key={i}>
+						<Square
+							value={squares[i]}
+							onSquareClick={() => handleClick(i)}
+							winSquare={winnerIndexes.includes(i)}
+						/>
+					</Col>
+				))}
 			</Row>
 		</>
 	);
@@ -69,6 +78,11 @@ export default function Game() {
 		const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
 		setHistory(nextHistory);
 		setCurrentMove(nextHistory.length - 1);
+	}
+
+	function handleReset() {
+		setHistory([Array(9).fill(null)]);
+		setCurrentMove(0);
 	}
 
 	function jumpTo(nextMove) {
@@ -99,11 +113,12 @@ export default function Game() {
 		<Container>
 			<Row>
 				<Col className='d-flex justify-content-center'>
-					<div>
+					<div style={{ width: "44%" }}>
 						<Board
 							xIsNext={xIsNext}
 							squares={currentSquares}
 							onPlay={handlePlay}
+							onReset={handleReset}
 						/>
 					</div>
 				</Col>
@@ -129,8 +144,8 @@ function calculateWinner(squares) {
 	for (let i = 0; i < lines.length; i++) {
 		const [a, b, c] = lines[i];
 		if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-			return squares[a];
+			return [squares[a], [a, b, c]];
 		}
 	}
-	return null;
+	return [null, null];
 }
